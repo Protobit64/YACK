@@ -1,4 +1,5 @@
 # YACK
 Yet Another Collection Kit
 
-A collection script for windows. Modular
+Launch RunRemote to execute the collection script agaisnt a list of hosts. It will
+provide options from their
