@@ -1,5 +1,4 @@
 # YACK
 Yet Another Collection Kit
 
-Fun
-2
+A collection script for windows. Modular
