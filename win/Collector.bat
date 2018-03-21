@@ -1,6 +1,6 @@
 @ECHO OFF
 REM # ============================================================================
-REM # Description: Runs the following modules
+REM # Description: Runs the modules in the provided list
 REM # Arguments:
 REM # 	ModulePath - 
 REM # 	OutputPath -
@@ -17,9 +17,8 @@ setlocal ENABLEDELAYEDEXPANSION
 
 
 REM # Parse arguments
-set ModuleFolderPath=%1
 set OutputPath=%2
-set ModulePath_List=%3
+set ModuleListPath=%3
 
 echo.
 
@@ -35,7 +34,7 @@ Exit /B 0
 	
 	REM # Get module count
 	set /a TotalModuleCount=0
-	FOR /F "eol=# delims=, " %%i in (%ModulePath_List%) do (
+	FOR /F "eol=# delims=, " %%i in (%ModuleListPath%) do (
 		set /a TotalModuleCount=TotalModuleCount+1
 	)
 	
@@ -46,7 +45,7 @@ Exit /B 0
 	set /a CurrentCount=0
 	
 	REM # Loop through the modules in the list
-	FOR /F "eol=# " %%i in (%ModulePath_List%) do (
+	FOR /F "eol=# " %%i in (%ModuleListPath%) do (
 		REM # Increment counter
 		set /a CurrentCount=!CurrentCount!+1
 		

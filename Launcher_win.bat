@@ -1,7 +1,7 @@
 @ECHO OFF
 REM # ============================================================================
-REM # Description: The launching script for host collection
-REM #  This is capable of doing both remote and local
+REM # Description: This will launch the collection script on local/remote systems 
+REM # 	and will allow for the checking of privledges
 REM # Copyright:
 REM # Version: 0.1
 REM # Date: 18MAR18
@@ -28,12 +28,14 @@ REM # ==========================================================================
 
 :Initialize
 
-    REM # Default Paths
+    REM # Configure Settings
     SET OutputPath=C:\Users\connor\Documents\output\
-
-	REM # Configure Settings
+	SET ModuleListPath=%~dp0\win\settings\Light_List.txt
 	SET ScriptPath=%~dp0\Modules\Collector.bat
 	SET StatusLogPath=%OutputPath%\Collected_Data\StatusLog.txt
+	SET PathMode=Absolute
+	SET HostListPath=LocalOnly
+
 	SET ScriptVersion=0.1
 	REM # How many second between each check of the log
 	SET LogStatusInterval=3
@@ -43,7 +45,16 @@ REM # ==========================================================================
 
 	
 :PrintBanner
-	echo Collection Script Version: v%ScriptVersion%
+	echo ===========================================================================
+	echo                    Yb  dP    db    .d88b 8  dP
+ 	echo                     YbdP    dPYb   8P    8wdP 
+	echo                      YP    dPwwYb  8b    88Yb 
+ 	echo                      88   dP    Yb `Y88P 8  Yb
+	echo.
+	echo Description: This will launch the collection script on local/remote systems 
+	echo               and will allow for the checking of privledges.
+	echo Version: v%ScriptVersion%
+	echo ===========================================================================
 	EXIT /B 0
 
 
@@ -82,40 +93,19 @@ REM # ==========================================================================
 	
 
 :Menu_LocalScriptExe
+	
+	REM # Prompt the user if the settings are correct.
+	call :UserSettingsCheck
 
-	REM # Print the current settings
-	echo.
-	echo.
-	echo ========= Local Script Execution =========
-	echo Script Settings
-	echo Path Mode: Absolute
-	echo Script Path: %ScriptPath%
-	echo Output Path: %OutputPath%
-	echo.
-	
-	REM # Ask user if settings are correct
-	set /p OptionSelected="Is this correct? (y/n)"
-	
-	
 	REM # Execute script if it's correct
-	IF /I "%OptionSelected%" EQU "y" (
+	IF /I "%UserSettingsCorrect%" EQU "y" (
 		call :LocalScriptExe
 		echo Script complete.
 		set /p OptionSelected="Press ENTER to continue."
 		EXIT /B 0
 	)
-	
-	REM # Exit Otherwise
-	IF /I "%OptionSelected%" EQU "n" (
-		echo Change the config in the ini file.
-        echo.
-		set /p OptionSelected="Press ENTER to continue."
-		EXIT /B 0
-	)
-	
-	REM # If a option wasn't selected then reprint
-	GOTO :Menu_LocalScriptExe
-	
+
+	Exit /B 0
 	
 	
 :Menu_RemoteScriptExe
@@ -145,7 +135,7 @@ REM # ==========================================================================
 
 :Menu_RemotePrivCheck
 	
-	
+
 
 	
 	
@@ -160,8 +150,8 @@ REM # ==========================================================================
 	call :LogAndEcho "Launching script locally."
 	
 	REm # Launch the collection script
-	call "cmd /c start %ScriptPath% parm1test " 
-	
+	call "cmd /c start %ScriptPath% %OutputPath% %ModuleListPath% " 
+
 	REM # Wait for the completion of the script
 	call :CheckLog_Blocking %StatusLogPath%
 	
@@ -178,7 +168,51 @@ REM # ======================== Checks ==================================
 REM # ============================================================================
 
 
-REM # ==================================================================
+REM # ============================================================================
+REM # Description: Prints the current settings and asks if they are correct.
+REM # Parameters:
+REM # Usage:
+REM #	call :CheckLog_Blocking C:/log.txt
+REM # Returns:
+REM # 	%UserSettingsCorrect% with a result of y or n.
+REM # ============================================================================
+:UserSettingsCheck
+
+	REM # Print the current settings
+	echo.
+	echo ========= Current Settings =========
+	echo Path Mode: %PathMode%
+	echo Script Path: %ScriptPath%
+	echo Module List Path: %ModuleListPath%
+	echo Output Path: %OutputPath%
+	echo Host List Path: %HostListPath%
+	echo.
+
+	REM # Ask user if settings are correct
+	set /p UserSettingsCorrect="Is this correct? (y/n)"
+
+
+	REM # Execute script if it's correct
+	IF /I "%UserSettingsCorrect%" EQU "y" (
+		
+		EXIT /B 0
+	)
+
+	REM # Exit Otherwise
+	IF /I "%UserSettingsCorrect%" EQU "n" (
+		echo Change the config in the ini file.
+		echo.
+		set /p OptionSelected="Press ENTER to continue."
+		EXIT /B 0
+	)
+
+
+	REM # If a option wasn't selected then reprint
+	GOTO :UserSettingsCheck
+
+	Exit /B 0
+
+REM # ============================================================================
 REM # Description: Checks the log file for parameters.
 REM # Parameters:
 REM #		- StatusLogPath
@@ -187,7 +221,7 @@ REM # 		- LoopUntilComplete (T/F)
 REM #			Determines if this is a blocking function.
 REM # Usage:
 REM #	call :CheckLog_Blocking C:/log.txt
-REM # ==================================================================
+REM # ============================================================================
 :CheckLog_Blocking
 	
 	SET Param_StatusLogPath=%~1
