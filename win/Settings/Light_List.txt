@@ -1,7 +1,12 @@
 # Modules
 # This is a comment line
-\Memory\CaptureMemory.bat
-\Memory\PageFiles.bat
-\Memory\hiberfil.ps1
-\Program_Execution\Processes.bat
+#\Memory\CaptureMemory.bat
+#\Memory\PageFiles.bat
+#\Memory\HibernationFiles.ps1
+#\Program_Execution\Processes.bat
 \dsfsd\f
+
+   
+\Program_Execution\Processes.bat
+\Registry\PrimaryHives.bat
+\Memory\HibernationFiles.ps1

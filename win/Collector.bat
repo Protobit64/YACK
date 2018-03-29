@@ -7,20 +7,19 @@ REM # 	OutputPath -
 REM #
 REM # Example
 REM # .\Collection_Scripts\Collect_Light.bat 
-REM # C:\Users\connor\Desktop\script_dev\YAC\Modules\
-REM # C:\Users\connor\Desktop\script_dev\YAC\Collected_Data\ 
-REM # C:\Users\connor\Desktop\script_dev\YAC\Configurations\Light_Modules.txt
+REM # C:\Users\connor\Documents\output\
+REM # C:\Users\connor\Documents\YACK\win\
+REM # C:\Users\connor\Documents\YACK\win\Settings\Light_List.txt
 REM # ============================================================================
 
-REM # start local variable environment
+REM # Allows expansion in for loops
 setlocal ENABLEDELAYEDEXPANSION
 
 
 REM # Parse arguments
-set OutputPath=%2
-set ModuleListPath=%3
-
-echo.
+set OutputPath=%1
+SET ContentPath=%2
+SET ModuleListPath=%3
 
 call :Initialize
 call :RunModules
@@ -28,7 +27,12 @@ call :RunModules
 Exit /B 0
 
 
+
 :Initialize
+
+	REM # Set Variables
+	SET ModuleFolderPath=%ContentPath%\Modules\
+
 	REM # Create Log File
 	echo # Don't modify the log format unless you modify the monitor script to match > %OutputPath%\StatusLog.txt
 	
@@ -51,6 +55,7 @@ Exit /B 0
 		
 		REM # Log the module attempting to be ran
 		call :LogModule %%i !CurrentCount!
+		
 			
 		REM # Check if the Module Exists
 		if exist "%ModuleFolderPath%%%i" (
@@ -61,8 +66,8 @@ Exit /B 0
 		) else (
 		
 			REM # Log that it wasn't found.
-			echo Module was not found. 
-			echo Module was not found. >> %OutputPath%\StatusLog.txt
+			echo    Module was not found. 
+			echo    Module was not found. >> %OutputPath%\StatusLog.txt
 		)
 	)
 	
@@ -74,11 +79,8 @@ Exit /B 0
 
 :RunModule
 	SET Param_ModuleRelPath=%~1
-
-	REM # call "cmd /c start %ScriptPath% parm1test " 
-
 	
-	REM # Check module type
+	REM # Determine module type
 	set "FullModulePath=%ModuleFolderPath%%Param_ModuleRelPath%"
 	for /f "delims=" %%a  in ("%FullModulePath%") do set "ModuleFileExtension=%%~xa"
 	
@@ -87,20 +89,11 @@ Exit /B 0
 		call "%ModuleFolderPath%%Param_ModuleRelPath%" %ModuleFolderPath% %OutputPath%
 	)
 	
-	REM ######### WORKING here to run ps1 and pass parameters
 	REM # powershell file
 	if /i "%ModuleFileExtension%" EQU ".ps1" (
-		PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '.\hiberfil.ps1' C:\Users\connor\Desktop\script_dev\YAC\Modules\ C:\Users\connor\Desktop\script_dev\YAC\Collected_Data\ "
+		PowerShell -ExecutionPolicy Bypass -Command "%ModuleFolderPath%%Param_ModuleRelPath% %ModuleFolderPath% %OutputPath% "
+	
 	)
-	
-	REM # call "%ModuleFolderPath%%Param_ModuleRelPath%" %ModuleFolderPath% %OutputPath%
-	
-	
-	
-	
-	
-	REM # cmd /c start %ScriptPath%
-	REM # PowerShell -NoProfile -ExecutionPolicy Bypass -Command "& '.\hiberfil.ps1'
 	
 	Exit /B 0
 

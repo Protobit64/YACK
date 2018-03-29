@@ -30,9 +30,12 @@ REM # ==========================================================================
 
     REM # Configure Settings
     SET OutputPath=C:\Users\connor\Documents\output\
-	SET ModuleListPath=%~dp0\win\settings\Light_List.txt
-	SET ScriptPath=%~dp0\Modules\Collector.bat
-	SET StatusLogPath=%OutputPath%\Collected_Data\StatusLog.txt
+	SET ContentPath=%~dp0\win\
+
+	SET ModuleListPath=%ContentPath%\Settings\Light_List.txt
+	SET ScriptPath=%ContentPath%\Collector.bat
+	SET StatusLogPath=%OutputPath%\StatusLog.txt
+
 	SET PathMode=Absolute
 	SET HostListPath=LocalOnly
 
@@ -46,10 +49,10 @@ REM # ==========================================================================
 	
 :PrintBanner
 	echo ===========================================================================
-	echo                    Yb  dP    db    .d88b 8  dP
- 	echo                     YbdP    dPYb   8P    8wdP 
-	echo                      YP    dPwwYb  8b    88Yb 
- 	echo                      88   dP    Yb `Y88P 8  Yb
+	echo                    Yb  dP    db    .d88b  8  dP
+ 	echo                     YbdP    dPYb   8P     8wdP 
+	echo                      YP    dPwwYb  8b     88Yb 
+ 	echo                      88   dP    Yb `Y88P  8  Yb
 	echo.
 	echo Description: This will launch the collection script on local/remote systems 
 	echo               and will allow for the checking of privledges.
@@ -97,16 +100,14 @@ REM # ==========================================================================
 	REM # Prompt the user if the settings are correct.
 	call :UserSettingsCheck
 
-	REM # Execute script if it's correct
-	IF /I "%UserSettingsCorrect%" EQU "y" (
+	REM # Check if the settings are correct
+	if /I "%UserSettingsCorrect%" EQU "y" (
+		REM #Execute the script
 		call :LocalScriptExe
-		echo Script complete.
-		set /p OptionSelected="Press ENTER to continue."
-		EXIT /B 0
 	)
-
-	Exit /B 0
 	
+	set /p OptionSelected="Press ENTER to continue."
+	EXIT /B 0
 	
 :Menu_RemoteScriptExe
 	
@@ -149,11 +150,12 @@ REM # ==========================================================================
 	echo.
 	call :LogAndEcho "Launching script locally."
 	
+
 	REm # Launch the collection script
-	call "cmd /c start %ScriptPath% %OutputPath% %ModuleListPath% " 
+	call %ScriptPath% %OutputPath% %ContentPath% %ModuleListPath%
 
 	REM # Wait for the completion of the script
-	call :CheckLog_Blocking %StatusLogPath%
+	REM # call :CheckLog_Blocking %StatusLogPath%
 	
 	call :LogAndEcho "Locally launched script finished."
 
@@ -164,7 +166,7 @@ REM # ==========================================================================
 	
 	
 REM # ============================================================================
-REM # ======================== Checks ==================================
+REM # ======================== Checks ============================================
 REM # ============================================================================
 
 
@@ -200,9 +202,7 @@ REM # ==========================================================================
 
 	REM # Exit Otherwise
 	IF /I "%UserSettingsCorrect%" EQU "n" (
-		echo Change the config in the ini file.
-		echo.
-		set /p OptionSelected="Press ENTER to continue."
+		echo Modify settings in the ini file.
 		EXIT /B 0
 	)
 

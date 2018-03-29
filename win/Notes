@@ -1,0 +1,85 @@
+ 
+
+
+
+# Current ToDo
+
+Modify output folder so that it's hostname
+    Collector Script
+    Launcher - Log Monitoring
+
+
+
+
+
+
+
+#Dev Path
+
+1. Local 
+2. wmic with share Drive
+3. Powershell with Share Drive
+
+
+
+ # Methods of Collection
+
+    Local: 
+        Local Device
+            Execute Script
+            Dump Local
+
+        External Device (USB/Share)
+            Execute from external
+            Data back to external
+
+
+    Remote: 
+       Code Execution
+            Powershell
+                Invoke-Command
+            smb
+            Scheduled Task 
+                schtasks /create /tn foobar /tr c:\windows\temp\foobar.exe /sc once /st 00:00 /S host /RU System
+                schtasks /F /delete /tn foobar /S host
+            Service
+                sc \\host create foobar binpath= “c:\windows\temp\foobar.exe”
+                sc \\host start foobar
+                sc \\host delete foobar
+            wmic
+                wmic /node:host process call create “c:\windows\temp\foobar.exe”
+
+
+       Data Movement
+           Share Drive
+           netcat
+           Powershell Session
+
+    Misc:
+        RDesktop
+        Networkshare
+
+
+
+ Remote: 
+
+ Remote: Powershell only
+ 1. Zip Contents
+ 2. Move Contents to Remote System
+       Invoke-Command {Stub Downloaed Script}
+       Unzip
+ 3. Execute Script Remotely
+       Invoke-Command collector
+ 4. Collect Contents
+       Move files by chunk
+           https://gist.github.com/jstangroome/791112
+       Note: PS5.0 has a better method but ya
+           
+
+   RPC
+   runas
+   Service. SC
+
+Local priv check
+ adim
+ You can run .ps1
