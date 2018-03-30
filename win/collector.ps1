@@ -11,13 +11,11 @@
 # "C:\\Users\\connor\\Documents\\YACK\\win\\Settings\\Light_List.txt"
 # ============================================================================
 
-
 Param(
     [string]$OutputPath,
     [string]$ContentPath,
     [string]$ModuleListPath
 )
-
 
 
 
@@ -111,8 +109,6 @@ function RunModule ($ModulePath)
             LogAndEcho "File type not supported."
         }
     }
-
-    Write-Host "finsihed"
 }
 
 function LogAndEcho ($Text)
@@ -127,18 +123,9 @@ function LogAndEcho ($Text)
 
 
 
+#######
 
-
-#Main
-Write-Host ""
-
-#Initialize
 Initialize
 
 #Launch variable
 RunModules 
-
-
-
-
-

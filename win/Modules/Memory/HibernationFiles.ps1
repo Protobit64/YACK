@@ -24,7 +24,7 @@ function LogAndEcho ($Text)
 #Write-Host "hiberfil"
 #Start-Sleep 2
 #net session
-sleep 1
+#sleep 1
 
 #Output Results to Statuslog
 LogAndEcho "Result: No hibernation File Found"

@@ -4,9 +4,10 @@
 #\Memory\PageFiles.bat
 #\Memory\HibernationFiles.ps1
 #\Program_Execution\Processes.bat
-\dsfsd\f
+#\dsfsd\f
 
-   
-\Program_Execution\Processes.bat
-\Registry\PrimaryHives.bat
-\Memory\HibernationFiles.ps1
+#\Registry\PrimaryHives.bat
+#\Memory\HibernationFiles.ps1
+
+\Program_Execution\Processes.ps1
+

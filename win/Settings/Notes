@@ -17,8 +17,12 @@ Modify output folder so that it's hostname
 #Dev Path
 
 1. Local 
-2. wmic with share Drive
-3. Powershell with Share Drive
+1b. Add a couple POC Modules
+1c. Hammer out Settings files
+
+3. wmic with share Drive
+4. Powershell with Share Drive
+5. Module Development
 
 
 
