@@ -17,7 +17,6 @@ Param(
     [string]$ModuleListPath
 )
 
-
 function Initialize
 {
     # Setup Variables
