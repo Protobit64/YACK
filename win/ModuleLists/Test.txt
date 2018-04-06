@@ -1,0 +1,12 @@
+
+#Simple Collection Settings
+
+
+#Collect Memory first
+#Get-Memory
+
+#Get General information for follow on functions
+Get-GeneralInfo
+
+Get-Processes
+
