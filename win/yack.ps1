@@ -126,6 +126,7 @@ function Start-Collection_Local
 {
     Write-Log "Starting Local Collection on $Script:HostNames"
     
+    #Loop through each module and log/run it
     for ($i = 0; $i -lt $($Script:ModulesList.Length); $i++)
     {
         $module = $($Script:ModulesList[$i])
@@ -139,8 +140,10 @@ function Start-Collection_Local
 
 function Start-Collection_Remote
 {
+    #Loop through each host
     foreach ($HostN in $Script:HostNames)
     {
+        #Run each module
         foreach ($Module in $Script:ModulesList)
         {
             Invoke-Command -ScriptBlock "Start-Collection_$a" -ComputerName $Script:HostNames -ThrottleLimit 3
@@ -165,16 +168,76 @@ function Write-Log ($Text)
 #This will be populated as it goes.
 function Get-GeneralInfo
 {
-    $ComputerName = 
+    $ComputerName = $Env:COMPUTERNAME
     $ProcessNames = $()
-    $Drives = $()
+    #$Drives = $(Get-PSDrive -PSProvider FileSystem)
+    $Drives = $([System.IO.DriveInfo]::getdrives()) 
+
+    $(Get-ItemProperty $Drives)
+    #$Drives[0].Name
 
     return "Success"
 }
-
-function Get-Processes
+########################## Program Execution Active
+function Get-ProcessNames
 {
-    $ComputerName
+    $ProcessList = $(Get-Process)
+        #Currently
+        # Process Name
+        # Creation TIme
+        # Executable Location
+            # Path
+            # Company 
+            # Version
+            # File Version
+            # Description 
+
+
+    $AdditionalInformation = $(Get-WmiObject -Class Win32_process | Select-Object -property ProcessID,ParentProcessId,CommandLine)
+        # Parent Process ID
+        # Command Line Args
+
+    #Combine the two lists
+    for ($i = 0; $i -lt $ProcessList.Length; $i++ )
+    {
+        #Match based on process ID
+        for ($j = 0; $j -lt $AdditionalInformation.Length; $j++)
+        {
+            if ($AdditionalInformation[$j].ProcessID -eq $ProcessList[$i].Id)
+            {
+                $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ParentProcessId" -Value $AdditionalInformation[$j].ParentProcessId
+                $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "CommandLine" -Value $AdditionalInformation[$j].CommandLine
+            }
+        }
+    }
+
+
+
+    #Faster Export Csv
+    #$csv = $(ConvertTo-Csv -InputObject $ProcessList[0])
+    #for ($i = 1; $i -lt $ProcessList.Length; $i++)
+    #{
+    #    $csv += $(ConvertTo-Csv -InputObject $ProcessList[$i])[2]
+    #}
+
+
+    $ProcessList | Export-Csv -Path "$Script:OutputPath\Program_Execution_Active\ProcessNameList.csv" -NoType
+
+
+
+    # Modules
+    # Executable Location
+        # Executable Hash
+        # Sig check
+    
+    # Args
+    # dlls
+    # Sockets
+    # handles 
+
+    
+    #Export to multiple files
+
     return "hi"
 }
 
@@ -188,5 +251,10 @@ function Get-Hostname
 
 
 # Starts the main function (c style)
-main
+# main
+Initialize-Settings
+New-Item -ItemType Directory -Force -Path  "$Script:OutputPath\Program_Execution_Active\" 
+
+Get-ProcessNames
+
 

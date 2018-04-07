@@ -8,5 +8,5 @@
 #Get General information for follow on functions
 Get-GeneralInfo
 
-Get-Processes
+Get-ProcessNames
 
