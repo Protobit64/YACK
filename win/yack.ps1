@@ -181,35 +181,41 @@ function Get-GeneralInfo
 ########################## Program Execution Active
 function Get-ProcessNames
 {
-    $ProcessList = $(Get-Process)
-        #Currently
-        # Process Name
-        # Creation TIme
-        # Executable Location
-            # Path
-            # Company 
-            # Version
-            # File Version
-            # Description 
+    # Get privs of the process as well
+    # Also username
+    # Hash executable path
+
+    $ProcessList = $(Get-WmiObject -Class Win32_process)
+
+    $Sha1_Hasher = new-object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
+    foreach ($proc in $ProcessList)
+    {
+        #Find out username/domain of the launcher
+        $owner = $($proc | Invoke-WmiMethod -Name GetOwner)      
+
+        # Compute Hash
+        $hash = 0
+        if ($proc.ExecutablePath -ne $null)
+        {
+            $hash = [System.BitConverter]::ToString($Sha1_Hasher.ComputeHash([System.IO.File]::ReadAllBytes($proc.ExecutablePath)))
+            $hash = $hash.replace("-", "")
+        }
 
 
-    $AdditionalInformation = $(Get-WmiObject -Class Win32_process | Select-Object -property ProcessID,ParentProcessId,CommandLine)
+        # Add Results
+        $proc | Add-Member -MemberType NoteProperty -Name "user_name" -Value $owner.user
+        $proc | Add-Member -MemberType NoteProperty -Name "user_domain" -Value $owner.Domain
+        $proc | Add-Member -MemberType NoteProperty -Name "sha1" -Value $hash
+    }
+
+    $ProcessList | Export-Csv -Path "$Script:OutputPath\Program_Execution_Active\ProcessNameList2.csv" -NoType
+
         # Parent Process ID
         # Command Line Args
 
-    #Combine the two lists
-    for ($i = 0; $i -lt $ProcessList.Length; $i++ )
-    {
-        #Match based on process ID
-        for ($j = 0; $j -lt $AdditionalInformation.Length; $j++)
-        {
-            if ($AdditionalInformation[$j].ProcessID -eq $ProcessList[$i].Id)
-            {
-                $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ParentProcessId" -Value $AdditionalInformation[$j].ParentProcessId
-                $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "CommandLine" -Value $AdditionalInformation[$j].CommandLine
-            }
-        }
-    }
+    #$AdditionalInformation = $(Get-Process |  Select-Object -property ID, Path, FileVersion, Description, Company, Product, ProductVersion, MainWindowHandle, MainWindowTitle)
+
+
 
 
 
@@ -221,8 +227,11 @@ function Get-ProcessNames
     #}
 
 
-    $ProcessList | Export-Csv -Path "$Script:OutputPath\Program_Execution_Active\ProcessNameList.csv" -NoType
 
+
+
+    
+    #$ProcessList | Out-File -FilePath "$Script:OutputPath\Program_Execution_Active\test.txt"
 
 
     # Modules
@@ -239,6 +248,12 @@ function Get-ProcessNames
     #Export to multiple files
 
     return "hi"
+}
+
+
+function Process_Token
+{
+    #https://github.com/FuzzySecurity/PowerShell-Suite/blob/master/Get-TokenPrivs.ps1
 }
 
 function Get-Hostname

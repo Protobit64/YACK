@@ -1,0 +1,26 @@
+
+    $AdditionalInformation = [System.Collections.ArrayList]@($(Get-Process |  Select-Object -property ID, Path))
+
+
+    foreach ($proc in $ProcessList)
+    {
+        $ind = 0
+        $match = -1
+        foreach ($addInfo in $AdditionalInformation)
+        {
+            if ($proc.ProcessId -eq $addInfo.ID)
+            {
+                $proc | Add-Member -MemberType NoteProperty -Name "FilePath" -Value $addInfo.Path
+                $proc | Add-Member -MemberType NoteProperty -Name "FileVersion" -Value $addInfo.FileVersion
+
+                $match = $ind
+                break;
+            }
+            $ind++
+        }
+
+        if ($match -ne -1)
+        {
+            $AdditionalInformation.RemoveAt($match)
+        }
+    }
