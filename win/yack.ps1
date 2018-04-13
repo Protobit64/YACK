@@ -181,73 +181,171 @@ function Get-GeneralInfo
 ########################## Program Execution Active
 function Get-ProcessNames
 {
-    # Get privs of the process as well
-    # Also username
-    # Hash executable path
+    ###############################################################
+    # Gather Volatile Information
+    ###############################################################
 
+    #Get current running processes and sockets
     $ProcessList = $(Get-WmiObject -Class Win32_process)
+    $NetstatOutput = $(netstat -a -o -n)
 
+    #Find owners of those processes
+    $ProcessOwners = @()
+    foreach ($proc in $ProcessList)
+    {
+        #Find out username/domain of the owner
+        $owner = $($proc | Invoke-WmiMethod -Name GetOwner)   
+        $ProcessOwners += $owner.User + "\" + $owner.Domain
+    }
+
+
+    ###############################################################
+    # Gather Non-volatile Information
+    ###############################################################
+
+    #File Executable Hash
+    $ProcessExecutableHashes = @()
     $Sha1_Hasher = new-object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
     foreach ($proc in $ProcessList)
     {
-        #Find out username/domain of the launcher
-        $owner = $($proc | Invoke-WmiMethod -Name GetOwner)      
-
-        # Compute Hash
+        # Compute Hash of the file
         $hash = 0
         if ($proc.ExecutablePath -ne $null)
         {
             $hash = [System.BitConverter]::ToString($Sha1_Hasher.ComputeHash([System.IO.File]::ReadAllBytes($proc.ExecutablePath)))
             $hash = $hash.replace("-", "")
         }
-
-
-        # Add Results
-        $proc | Add-Member -MemberType NoteProperty -Name "user_name" -Value $owner.user
-        $proc | Add-Member -MemberType NoteProperty -Name "user_domain" -Value $owner.Domain
-        $proc | Add-Member -MemberType NoteProperty -Name "sha1" -Value $hash
+        $ProcessExecutableHashes += $hash
     }
 
-    $ProcessList | Export-Csv -Path "$Script:OutputPath\Program_Execution_Active\ProcessNameList2.csv" -NoType
-
-        # Parent Process ID
-        # Command Line Args
-
-    #$AdditionalInformation = $(Get-Process |  Select-Object -property ID, Path, FileVersion, Description, Company, Product, ProductVersion, MainWindowHandle, MainWindowTitle)
-
-
-
-
-
-    #Faster Export Csv
-    #$csv = $(ConvertTo-Csv -InputObject $ProcessList[0])
-    #for ($i = 1; $i -lt $ProcessList.Length; $i++)
-    #{
-    #    $csv += $(ConvertTo-Csv -InputObject $ProcessList[$i])[2]
-    #}
-
+    #File Executable Sig Check
+    $ProcessExecutableSigCheck = @()
+    $Sha1_Hasher = new-object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
+    foreach ($proc in $ProcessList)
+    {
+        if ($proc.ExecutablePath -ne $null)
+        {
+            # Compute Hash of the file
+            $auth = Get-AuthenticodeSignature -FilePath $proc.ExecutablePath
+            $ProcessExecutableSigCheck += $auth.Status
+        }
+        else 
+        {
+            $ProcessExecutableSigCheck += ""
+        }
+    }
 
 
+    ###############################################################
+    # Parse Information
+    ###############################################################
+
+    ###### Convert netstat output -> variable
+    $NetworkConnections = @()
+    #Get rid of the output headers
+    $NetstatOutput = $NetstatOutput[4..$NetstatOutput.Length]
+
+    #Loop through each line
+    foreach ($connection in $NetstatOutput)
+    {
+        #Remove whitespace form start of line
+        $connection = $connection -replace ('^\s+', '')
+
+        #Split items on whitespace
+        $connection = $connection -split ('\s+')
+
+        #Parse items based on observed outcomes
+        if ($connection.Length -eq 5) #All fields present
+        {
+            $properties = @{
+                Protocol = $connection[0]
+                LocalAddress = $connection[1]
+                ForeignAddress = $connection[2]
+                State = $connection[3]
+                PID = $connection[4]
+            }
+        }
+        elseif ($connection.Length -eq 4) #State is missing
+        {
+            $properties = @{
+                Protocol = $connection[0]
+                LocalAddress = $connection[1]
+                ForeignAddress = $connection[2]
+                State = ""
+                PID = $connection[3]
+            }
+        }
+        else { #Something went wrong
+            $properties = @{
+                Protocol = ""
+                LocalAddress = ""
+                ForeignAddress = ""
+                State = ""
+                PID = ""
+            }
+        }
+
+        #Add to resulting object
+        $NetworkConnections += New-Object -TypeName PSObject -Property $properties
+    }
 
 
-    
-    #$ProcessList | Out-File -FilePath "$Script:OutputPath\Program_Execution_Active\test.txt"
+    ###### Create connection lists
+    $ProcessConnectionList = @()
+
+    foreach ($proc in $ProcessList)
+    {
+        $Connections = ""
+        foreach ($conn in $NetworkConnections)
+        {
+            if ($conn.PID -eq $proc.ProcessId)
+            {
+                $Connections += $conn.LocalAddress + "`n"
+            }
+        }
+        $ProcessConnectionList += $Connections.Trim()
+    }
+
+    #Determine parent process names
+    $ProcessParentNames = @()
+    foreach ($proc in $ProcessList)
+    {
+        $ParentName = ""
+        foreach ($parentProc in $ProcessList)
+        {
+            if ($proc.ProcessId -eq $parentProc.ProcessId)
+            {
+                $ParentName = $parentProc.ProcessName
+            }
+        }
+        $ProcessParentNames += $ParentName
+    }
 
 
-    # Modules
-    # Executable Location
-        # Executable Hash
-        # Sig check
-    
-    # Args
-    # dlls
-    # Sockets
-    # handles 
+    ###############################################################
+    # Organize Results
+    ###############################################################
 
-    
-    #Export to multiple files
+    #Append information to results
 
-    return "hi"
+    for ($i = 0; $i -lt $ProcessList.Length; $i++)
+    {
+        # Add Results
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ProcessOwner" -Value $ProcessOwners[$i]
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "SHA1Hash" -Value $ProcessExecutableHashes[$i]
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "Connections" -Value $ProcessConnectionList[$i]
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ParentProcessName" -Value $ProcessParentNames[$i]
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ExeSigCheck" -Value $ProcessExecutableSigCheck[$i]
+    }
+
+    $ProcessList = $($ProcessList | Select-Object -Property CreationDate, ProcessName, ProcessId, ParentProcessName, ParentProcessId, ProcessOwner, `
+                                                            Connections, ExecutablePath, ExeSigCheck, CommandLine, SHA1Hash, CSName, HandleCount, ThreadCount, `
+                                                            VirtualSize, ReadOperationCount, ReadTransferCount, WriteOperationCount, WriteTransferCount, `
+                                                            UserModeTime, KernelModeTime)
+
+    #$ProcessList | Export-Csv -Path "$Script:OutputPath\Program_Execution_Active\ProcessNameList.csv" -NoType
+
+    return $ProcessList
 }
 
 
