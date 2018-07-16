@@ -1,4 +1,7 @@
 ##############################
+#.OUTPUT_Type CSV
+#.OUTPUT_Name ProcessInfo.csv
+#
 #.SYNOPSIS
 # Gets general process information
 #
@@ -35,9 +38,9 @@ function Get-ProcessInfo
     $ProcessExecutableSigCheck = Get-ProcessExeSig $ProcessList
 
     #Parse netstat output
-    $NetworkConnections = Convert-NetstatOutput $NetstatOutput
+    #$NetworkConnections = Convert-NetstatOutput $NetstatOutput
     #Find process's network connections
-    $ProcessNetworkConnections = Get-ProcessConnections $ProcessList $NetworkConnections
+    #$ProcessNetworkConnections = Get-ProcessConnections $ProcessList $NetworkConnections
 
     #Determine Parent process names
     $ProcessParentNames = Get-ParentProcessNames $ProcessList
@@ -52,7 +55,7 @@ function Get-ProcessInfo
         # Add Results
         $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ProcessOwner" -Value $ProcessOwners[$i]
         $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "SHA1Hash" -Value $ProcessExecutableHashes[$i]
-        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "Connections" -Value $ProcessNetworkConnections[$i]
+        #$ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "Connections" -Value $ProcessNetworkConnections[$i]
         #$ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "Connections" -Value $ProcessConnectionList[$i]
         $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ParentProcessName" -Value $ProcessParentNames[$i]
         $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ExeSigCheck" -Value $ProcessExecutableSigCheck[$i]
@@ -274,6 +277,5 @@ function Get-ParentProcessNames ($ProcessList)
     return $ProcessParentNames
 }
 
-#Get-ProcessInfo
-
-return "asd"
+return Get-ProcessInfo
+#return "asd"
