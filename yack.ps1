@@ -45,8 +45,8 @@ function Initialize-Settings
     $Script:ScriptVersion="0.1"
 
     # Configure Paths
-    $Script:OutputPath = "$($(Resolve-Path .\..\..\).Path)\Output\"
     $Script:ScriptPath = $(Resolve-Path .\).Path
+    $Script:OutputPath = "$ScriptPath\\Output\\"
 
     #Derived paths
     $Script:SettingsPath = "$ScriptPath\\Settings\\yack.ini"
