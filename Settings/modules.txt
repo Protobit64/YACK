@@ -2,5 +2,6 @@
 #Simple Collection Settings
 
 
+
+\Process_Active\Get-ProcessHandles.ps1
 \Process_Active\Get-ProcessInfo.ps1
-asdasd

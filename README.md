@@ -1,7 +1,12 @@
 #TODO
+Change Read-Module into reading all modules
+    Put into a list
+
 More Modules
     Network connections
 Additional Support for File Output
+
+Adjust Module to run binaries form temp directory
 
 
 

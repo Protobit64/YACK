@@ -1,6 +1,6 @@
 ##############################
 #.OUTPUT_Type CSV
-#.OUTPUT_Name ProcessInfo.csv
+#.OUTPUT_Name ProcessInfo.csv 
 #
 #.SYNOPSIS
 # Gets general process information

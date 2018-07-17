@@ -53,6 +53,7 @@ function Initialize-Settings
     $Script:ScriptLogPath = "$ScriptPath\\Settings\\yack.log"
     $Script:HostNamesPath = "$ScriptPath\\Settings\\hostnames.txt"
     $Script:ModulesPath =  "$ScriptPath\\Modules\\"
+    $Script:DependenciesPath =  "$ScriptPath\\Modules\\_Dependencies\\"
 
     #Running Config
     $Script:CollectionMode = "Local" #Local/Remote
@@ -102,7 +103,7 @@ function Initialize-Settings
 
 function Compare-Settings
 {
-    return $true
+    #return $true
 
     #Print the current settings
     while($true)
@@ -143,32 +144,37 @@ function Start-Collection_Local
     $cNum = 1
     $tNum = $Script:ModulesList.Count
 
-    #Iterate over every Module in the list
-    foreach ($ModuleN in $Script:ModulesList)
+    # Read every binary dependency
+    # Move all required binaries for the modules
+
+    $mods = Read-Modules $Script:ModulesList
+
+    Write-Dependencies $mods
+
+    #Runt the modules
+    foreach ($mod in $mods)
     {
-        Write-Log $CollectLogPath "[$cNum/$tNum] Starting Module: $ModuleN"
+        Write-Log $CollectLogPath "[$cNum/$tNum] Starting Module: $($mod.ModuleName)"
 
-        #Read the Module
-        $mod = Read-Module $ModuleN
-
-        if ($mod.SuccessfulRead)
+        if ($mod.Error -eq $false)
         {
             #Run Module
             $mod.Results = Invoke-Command -ScriptBlock $mod.ScriptBlock
             Write-Log $CollectLogPath "[$cNum/$tNum]        Finished: $($mod.Results.Count) Results"
+
+            #Output results
+            Write-ModResults "$Script:OutputPath$Script:HostNames\" $mod
         }
         else
         {
-            Write-Log  $CollectLogPath "[$cNum/$tNum]        Finished: ERROR - Reading Module"
+            Write-Log  $CollectLogPath "[$cNum/$tNum]        Finished: ERROR - $($mod.ErrorMessage)"
         }
-
-        #Output results
-        Write-ModResults "$Script:OutputPath$Script:HostNames\" $mod
 
         #Increment Counter
         $cNum++
     }
 
+    Remove-Dependencies
     Write-Log $Script:ScriptLogPath "Finished Running $tNum Modules on $Script:HostNames"
 }
 
@@ -211,46 +217,120 @@ function Write-ModResults ($outputPath, $Module)
     }
 }
 
-function Read-Module ($mName)
+function Write-Dependencies ($Modules, $wPath)
 {
-    $Module = New-Object PSObject
-    $Module | Add-Member -Type NoteProperty -Name "ModuleName" -Value $mName
-    $Module | Add-Member -Type NoteProperty -Name "SuccessfulRead" -Value $false
-    $Module | Add-Member -Type NoteProperty -Name "Results" -Value $null
-    $Module | Add-Member -Type NoteProperty -Name "ScriptBlock" -Value $null
-    $Module | Add-Member -Type NoteProperty -Name "OutputType" -Value $null
-    $Module | Add-Member -Type NoteProperty -Name "OutputName" -Value $null
-    $Module | Add-Member -Type NoteProperty -Name "Path" -Value $($Script:ModulesPath + "$mName")
+    $TranferFolder = "$env:TEMP\yack"
+    
+    #Create Dependencies List
+    $Dependencies = @()
 
-    #Output form
-    if ($(Test-Path $Module.Path) -eq $true)
+    #Build dependencies list
+    foreach ($mod in $Modules)
     {
-        #Read Script Block
-        $Module.ScriptBlock = $(get-command $Module.Path | Select-Object -ExpandProperty ScriptBlock)
-
-        #Read OutputType
-        $OutputType_Flag = "#.OUTPUT_Type "
-        $OutputType = $($Module.ScriptBlock.ToString() -split "`n" | ForEach-Object { if ($_ -match $OutputType_Flag) {return $_} })
-        $Module.OutputType = $($OutputType -replace $OutputType_Flag, "").Trim()
-
-        #Read Output Name
-        $OutputName_Flag = "#.OUTPUT_Name "
-        $OutputName = $($Module.ScriptBlock.ToString() -split "`n" | ForEach-Object { if ($_ -match $OutputName_Flag) {return $_} })
-        $Module.OutputName = $($OutputName -replace $OutputName_Flag, "").Trim()
-
-        $Module.SuccessfulRead = $true
+        foreach ($dep in $mod.Dependencies)
+        {
+            if ($Dependencies.Contains($dep) -ne $true)
+            {
+                $Dependencies += $dep
+            }
+        }
     }
-    else
+
+    #Validate that the Module dependencies exist
+    foreach ($mod in $Modules)
     {
-        $Module.SuccessfulRead = $false
+        foreach ($dep in $mod.Dependencies)
+        {
+            if ($(Test-Path "$Script:DependenciesPath$dep") -eq $false)
+            {
+                $mod.Error = $true
+                $mod.ErrorMessage = "Module dependencies not found"
+                break
+            }
+        }
     }
-    #The Script
 
-    return $Module
+    #Create Transfer Folder
+    New-Item -Path "$TranferFolder" -ItemType directory -Force
+
+    #Transfer Dependencies
+    foreach ($dep in $Dependencies)
+    {
+        $depPath = "$Script:DependenciesPath$dep"
+        if ($(Test-Path $depPath) -eq $true)
+        {
+            Copy-Item -Path $depPath -Destination $TranferFolder
+        }
+    }
+}
+
+function Remove-Dependencies ($Modules, $wPath)
+{
+    $TranferFolder = "$env:TEMP\yack"
+
+    Remove-Item -Path $TranferFolder -Recurse
+}
+
+
+function Read-Modules ($mNames)
+{
+    $Modules = @()
+
+    foreach ($mName in $mNames)
+    {
+
+        $Module = New-Object PSObject
+        $Module | Add-Member -Type NoteProperty -Name "ModuleName" -Value $mName
+        $Module | Add-Member -Type NoteProperty -Name "Error" -Value $false
+        $Module | Add-Member -Type NoteProperty -Name "ErrorMessage" -Value ""
+        $Module | Add-Member -Type NoteProperty -Name "Results" -Value $null
+        $Module | Add-Member -Type NoteProperty -Name "ScriptBlock" -Value $null
+        $Module | Add-Member -Type NoteProperty -Name "OutputType" -Value $null
+        $Module | Add-Member -Type NoteProperty -Name "OutputName" -Value $null
+        $Module | Add-Member -Type NoteProperty -Name "Dependencies" -Value $null
+        $Module | Add-Member -Type NoteProperty -Name "Path" -Value $($Script:ModulesPath + "$mName")
+
+        if ($(Test-Path $Module.Path) -eq $true)
+        {
+            #Read Script Block
+            $Module.ScriptBlock = $(get-command $Module.Path | Select-Object -ExpandProperty ScriptBlock)
+
+            #Read OutputType
+            $Directive_Flag = "#.OUTPUT_Type "
+            $Directive_Text = $($Module.ScriptBlock.ToString() -split "`n" | ForEach-Object { if ($_ -match $Directive_Flag) {return $_} })
+            $Module.OutputType = $($Directive_Text -replace $Directive_Flag, "").Trim()
+
+            #Read Output Name
+            $Directive_Flag = "#.OUTPUT_Name "
+            $Directive_Text = $($Module.ScriptBlock.ToString() -split "`n" | ForEach-Object { if ($_ -match $Directive_Flag) {return $_} })
+            $Module.OutputName = $($Directive_Text -replace $Directive_Flag, "").Trim()
+
+            #Read Dependency
+            $Directive_Flag = "#.DEPENDENCY "
+            $Directive_Text = $($Module.ScriptBlock.ToString() -split "`n" | ForEach-Object { if ($_ -match $Directive_Flag) {return $_} })
+            if ($Directive_Text -ne $null)
+            {
+                $Module.Dependencies = $($Directive_Text -replace $Directive_Flag, "").Trim() -split " "
+            }
+
+            $Module.Error = $false
+        }
+        else
+        {
+            $Module.Error = $true
+            $Module.ErrorMessage = "Module Not Found"
+            
+        }
+
+
+        $Modules += $Module
+    }
+
+    return $Modules
 
 }
 
 
 
-######################## 
+########################
 main
