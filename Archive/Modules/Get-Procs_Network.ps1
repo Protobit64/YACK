@@ -13,7 +13,7 @@
 # Get-ProcessInfo
 #
 #.NOTES
-#General notes
+# ToDo - Include file information
 ##############################
 function Get-ProcessInfo
 {
@@ -21,13 +21,13 @@ function Get-ProcessInfo
     #Get current running processes and sockets
     $ProcessList = $(Get-WmiObject -Class Win32_process) #Primary
     $ProcessList_ps = $(Get-Process) #Contains additional info
-    $NetstatOutput = $(netstat -a -o -n)
+    #$NetstatOutput = $(netstat -a -o -n)
 
     #Find owners of those processes
     $ProcessOwners =  Get-ProcessOwners $ProcessList
 
     #Grabs processlist2's Modules and arrange it into ProcessList's order
-    $ProcessModules = Get-ProcessModules $ProcessList $ProcessList_ps
+    #$ProcessModules = Get-ProcessModules $ProcessList $ProcessList_ps
 
     ### Non-Voltaile
 
@@ -45,7 +45,9 @@ function Get-ProcessInfo
     #Determine Parent process names
     $ProcessParentNames = Get-ParentProcessNames $ProcessList
 
-    #Combine 
+    #Process File Information
+    #Company, FileVersion, ProductVersion, Description
+    $FileInfo = Get-ProcessFileInfo $ProcessList $ProcessList_ps
 
 
     ### Output
@@ -54,17 +56,24 @@ function Get-ProcessInfo
     {
         # Add Results
         $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ProcessOwner" -Value $ProcessOwners[$i]
-        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "SHA1Hash" -Value $ProcessExecutableHashes[$i]
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "MD5Hash" -Value $ProcessExecutableHashes[$i]
         #$ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "Connections" -Value $ProcessNetworkConnections[$i]
         #$ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "Connections" -Value $ProcessConnectionList[$i]
         $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ParentProcessName" -Value $ProcessParentNames[$i]
         $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ExeSigCheck" -Value $ProcessExecutableSigCheck[$i]
+
+        #File Info
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "Company" -Value $FileInfo[$i].Company
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "FileVersion" -Value $FileInfo[$i].FileVersion
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "ProductVersion" -Value $FileInfo[$i].ProductVersion
+        $ProcessList[$i] | Add-Member -MemberType NoteProperty -Name "FileDescription" -Value $FileInfo[$i].FileDescription
     }
 
 
     #Select required values
-    $ProcessList = $($ProcessList | Select-Object -Property CreationDate, ProcessName, ProcessId, ParentProcessName, ParentProcessId, ProcessOwner, `
-                                                            Connections, ExecutablePath, ExeSigCheck, CommandLine, SHA1Hash, CSName, HandleCount, ThreadCount, `
+    $ProcessList = $($ProcessList | Select-Object -Property CSName, CreationDate, ProcessName, ProcessId, ParentProcessName, ParentProcessId, ProcessOwner, `
+                                                            ExecutablePath, ExeSigCheck, Company, FileVersion, ProductVersion, FileDescription, `
+                                                            CommandLine, SHA1Hash, HandleCount, ThreadCount, `
                                                             VirtualSize, ReadOperationCount, ReadTransferCount, WriteOperationCount, WriteTransferCount, `
                                                             UserModeTime, KernelModeTime)
 
@@ -111,13 +120,38 @@ function Get-ProcessModules ($ProcessList, $ProcessList_ps)
     return $ProcessModules
 }
 
+function Get-ProcessFileInfo ($ProcessList, $ProcessList_ps)
+{
+    #$ProcessFileInfo = New-Object System.Collections.Generic.List[System.Object]
+    $procFileInfo= @()
+
+    foreach ($proc in $ProcessList)
+    {
+        $FileInfo = "" | Select-Object Company, FileVersion, ProductVersion, FileDescription
+        
+        foreach ($proc_ps in $ProcessList_ps)
+        {
+            if ($proc.ProcessId -eq $proc_ps.ID)
+            {
+                
+                $FileInfo.Company, $FileInfo.FileVersion, $FileInfo.ProductVersion, $FileInfo.FileDescription = `
+                $proc_ps.Company,   $proc_ps.FileVersion, $proc_ps.ProductVersion,  $proc_ps.FileDescription
+                break
+            }
+        }
+        $procFileInfo += $FileInfo
+    }
+
+    return $procFileInfo
+}
+
 
 
 function Get-ProcessExeHashes ($ProcessList) 
 {
     $ProcessExecutableHashes = New-Object System.Collections.Generic.List[System.Object]
 
-    $Sha1_Hasher = new-object -TypeName System.Security.Cryptography.SHA1CryptoServiceProvider
+    $Sha1_Hasher = new-object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
     foreach ($proc in $ProcessList)
     {
         # Compute Hash of the file

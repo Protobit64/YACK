@@ -1,161 +1,64 @@
-##############################
+############################################################
 #.OUTPUT_Type CSV
 #.OUTPUT_Name ProcessHandles.csv
 #.DEPENDENCY handle.exe handle64.exe
 #
 #.SYNOPSIS
-# Gets general process information
+# Gets all handles for currently running processes.
 #
 #.DESCRIPTION
-# Process Names
 # 
 #
-#.EXAMPLE
-# Get-ProcessInfo
-#
 #.NOTES
-#General notes
-##############################
+# Minor modifications made to kansa
+# License: Apache License 2.0
+# Credits: https://github.com/davehull/Kansa/blob/master/Modules/Process/Get-Handle.ps1
+############################################################
 
 
 
-function Parse-Handles ($HandleOutput)
-{
-    if ($HandleOutput -eq $null)
-    {
-        return $null
-    }
 
-    #Trim empty Lines
-    $HandleOutput = $HandleOutput | Where-Object {$_.Trim() -ne ""}
 
-    $parsedHandles = New-Object System.Collections.Generic.List[System.Object]
-
-    $i = 0
-    while($i -le $HandleOutput.Count)
-    {
-        #Find Start of section
-        if ($HandleOutput[$i] -like '--------*')
-        {
-            $lineSplit = $HandleOutput[$i+1].Split(" ")
-
-            #Parse Process Name
-            $ProcName = $lineSplit[0]
-            #PID
-            $procPID = $lineSplit[2]
-            #Owner
-            $owner = $lineSplit[3]
-            if ($owner -eq '\<unable') {
-                $owner = 'unk'
+if (Test-Path "$env:temp\yack\handle.exe") {
+    $data = (& $env:temp\yack\handle.exe /accepteula -a)
+    #("Process","PId","Owner","Type","Perms","Name") -join $Delimiter
+    foreach($line in $data) {
+        $line = $line.Trim()
+        if ($line -match " pid: ") {
+            $HandleId = $Type = $Perms = $Name = $null
+            $pattern = "(?<ProcessName>^[-a-zA-Z0-9_.]+) pid: (?<PId>\d+) (?<Owner>.+$)"
+            if ($line -match $pattern) {
+                $ProcessName,$ProcId,$Owner = ($matches['ProcessName'],$matches['PId'],$matches['Owner'])
             }
-
-            #Iterate through handles for the file
-            $j = $i + 2
-            while (($HandleOutput[$j] -notlike '--------*') `
-                -and ($j -le $HandleOutput.Count))
-            {
-                $trimmmed_line = $($HandleOutput[$j] -replace '\s+', ' ').TrimEnd()
-                $lineSplit2 = $trimmmed_line.Split(" ")
-
-                $handleType = $lineSplit2[2]
-                #if there is a value...
-                if ($lineSplit2.Length -gt 3)
-                {
-                    switch ($handleType)
-                    {
-                        "File"
-                            {
-                                $handleNum = $lineSplit2[1] -replace ":", ""
-                                #Permissions included
-                                if ($lineSplit2[3] -like '(*'){
-                                    $handlePerm = $lineSplit2[3]
-                                    #concat the rest of the array
-                                    $handleValue = "$($lineSplit2[4..($lineSplit2.length-1)])"
-                                }
-                                else {
-                                    $handlePerm = ""
-                                    #concat the rest of the array
-                                    $handleValue = "$($lineSplit2[3..($lineSplit2.length-1)])"
-                                }
-
-                                #Add to list
-                                $pObj = New-Object -TypeName PSObject
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Process Name" -Value $ProcName
-                                $pObj | Add-Member -MemberType NoteProperty -Name "PID" -Value $procPID
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Owner" -Value $owner
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Handle Type" -Value $handleType
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Handle Permissions" -Value $handlePerm
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Handle Value" -Value $handleValue
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Handle Number" -Value $handleNum
-
-                                $parsedHandles.Add($pObj)
-                                break
-                            }
-                        "Key"
-                            {
-                                $handleNum = $lineSplit2[1] -replace ":", ""
-                                $handlePerm = ""
-                                #concat the rest of the array
-                                $handleValue = "$($lineSplit2[3..($lineSplit2.length-1)])"
-
-                                $pObj = New-Object -TypeName PSObject
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Process Name" -Value $ProcName
-                                $pObj | Add-Member -MemberType NoteProperty -Name "PID" -Value $procPID
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Owner" -Value $owner
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Handle Type" -Value $handleType
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Handle Permissions" -Value $handlePerm
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Handle Value" -Value $handleValue
-                                $pObj | Add-Member -MemberType NoteProperty -Name "Handle Number" -Value $handleNum
-
-                                $parsedHandles.Add($pObj)
-                                break
-                            }
-
-                        Default {}
+        } else {
+            $pattern = "(?<HandleId>^[a-f0-9]+): (?<Type>\w+)"
+            if ($line -match $pattern) {
+                $HandleId,$Type = ($matches['HandleId'],$matches['Type'])
+                $Perms = $Name = $null
+                switch ($Type) {
+                    "File" {
+                        $pattern = "(?<HandleId>^[a-f0-9]+):\s+(?<Type>\w+)\s+(?<Perms>\([-RWD]+\))\s+(?<Name>.*)"
+                        if ($line -match $pattern) {
+                            $Perms,$Name = ($matches['Perms'],$matches['Name'])
+                        }
+                    }
+                    default {
+                        $pattern = "(?<HandleId>^[a-f0-9]+):\s+(?<Type>\w+)\s+(?<Name>.*)"
+                        if ($line -match $pattern) {
+                            $Name = ($matches['Name'])
+                        }
                     }
                 }
-
-
-                $j++
+                if ($Name -ne $null) {
+                    $o = "" | Select-Object ProcessName, ProcId, HandleId, Owner, Type, Perms, Name
+                    $o.ProcessName, $o.ProcId, $o.HandleId, $o.Owner, $o.Type, $o.Perms, $o.name = `
+                        $ProcessName,$ProcId,("0x" + $HandleId),$Owner,$Type,$Perms,$Name
+                    $o
+                }
             }
-
-            #continue where j left off
-            $i = $j
-        }
-        else {
-            $i++
         }
     }
 
-
-    return $parsedHandles
-}
-
-
-    
-
-
-# Point path
-$binFolder = "$env:TMP\yack"
-
-#Select binary
-if ([Environment]::Is64BitProcess) {
-    $binary = "handle64.exe"
 } else {
-    $binary = "handle.exe"
-}
-
-#Build binary path
-$binPath = "$binFolder\$binary"
-
-
-
-#Run handles.exe if it exists
-if ($(Test-Path "$binPath") -eq $true)
-{
-    $HandleOutput = $(& $binPath "-a")
-    return Parse-Handles $handleOutput
-}
-else {
-    return $null
+    Write-Error "Handle.exe not found in $env:SystemRoot."
 }

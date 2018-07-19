@@ -154,7 +154,7 @@ function Start-Collection_Local
     #Runt the modules
     foreach ($mod in $mods)
     {
-        Write-Log $CollectLogPath "[$cNum/$tNum] Starting Module: $($mod.ModuleName)"
+        Write-Log $CollectLogPath "[$cNum/$tNum] Launching Module: $($mod.ModuleName)"
 
         if ($mod.Error -eq $false)
         {
