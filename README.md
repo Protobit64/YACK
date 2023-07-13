@@ -1,18 +1,8 @@
-#TODO
--POC framework w/ processes
-
-Additional Support for File Output
-
-
-
-#compatibility
-vista+
-server 2008+
-ps 2.0
 
 
 # YACK
 Yet Another Collection Kit
 
-I would suggest using VS code to modify this.
-It has good syntax highlighting, git integration and a terminal.
+YACK was developed to be a framework to remotely collect windows forensic items while maintaining powershell 2.0 compatibility. The goal was to ensure maximum compatibility with older versions of Windows. No longer updated due to PS 2.0 constraint being more and more rare.
+
+
