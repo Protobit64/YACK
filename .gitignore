@@ -1,2 +1,4 @@
 Output/
-/Modules/_Dependencies/
+.vscode/
+/Settings/yack.log
+/Internals/Config/SecurePassword.txt
