@@ -4,8 +4,9 @@
 No longer updated due to PS 2.0 constraints becoming more and more rare.
 
 # YACK
-<img src="Help/YACK.png" alt="Getting started" />
+Yet Another Collection Kick
 
+<img src="Help/YACK.png" alt="Getting started" />
 
 # Description
 YACK is a framework to remotely collect windows forensic items while maintaining powershell 2.0 compatibility. The goal was to ensure maximum compatibility with older versions of Windows. Significant inspiration drawn from Kansa. 
