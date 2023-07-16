@@ -3,3 +3,4 @@ Output/
 .vscode
 /Settings/yack.log
 /Internals/Config/Username.txt
+/Internals/Config/Cred_SecurePassword.txt
