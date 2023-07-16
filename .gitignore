@@ -1,5 +1,5 @@
 Output/
-.vscode/
+.vscode/*
 .vscode
 /Settings/yack.log
 /Internals/Config/SecurePassword.txt
