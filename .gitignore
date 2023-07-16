@@ -1,4 +1,5 @@
 Output/
+Output/*
 .vscode/*
 .vscode
 /Settings/yack.log
