@@ -24,8 +24,8 @@ Collectors are self-contained PowerShell scripts that are ran on the target mach
 ### Parsers
 Parsers are self-contained PowerShell scripts that do additional processing of the data which could not be completed on the target systems. An example collector of this is a memory dump, where you want to run additional modules against the results. 
 
-# Additional Help
-View UserGuide.docx in Help.
+# Getting Started
+View UserGuide.docx in Help folder to see how to configure the script.
 
 
 
